@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Session, User } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Alert } from "react-native";
@@ -13,6 +14,12 @@ export type UserProfile = {
   is_available: boolean;
   device_token?: string;
   created_at?: string;
+  phone?: string;
+  address?: string;
+  birth_date?: string;
+  hospital_id?: string;
+  hospital_name?: string;
+  role?: string;
 };
 
 type AuthContextType = {
@@ -23,6 +30,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  clearSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,41 +43,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const clearSession = async () => {
+    console.log("🧹 Clearing session...");
+    await AsyncStorage.removeItem("supabase.auth.token");
+    await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+  };
+
   const fetchProfile = async (userId: string) => {
     try {
-      // Try to get from user_profiles table
-      let { data, error } = await supabase
+      // Cek apakah user adalah hospital staff
+      const { data: staffData, error: staffError } = await supabase
+        .from("hospital_staff")
+        .select("*, hospitals(id, name)")
+        .eq("id", userId)
+        .single();
+
+      if (staffData && !staffError) {
+        setProfile({
+          id: staffData.id,
+          email: staffData.email,
+          name: staffData.name,
+          blood_type: "",
+          latitude: 0,
+          longitude: 0,
+          is_available: true,
+          phone: staffData.phone,
+          hospital_id: staffData.hospital_id,
+          hospital_name: staffData.hospitals?.name,
+          role: staffData.role,
+        });
+        return;
+      }
+
+      const { data: donorData, error: donorError } = await supabase
         .from("user_profiles")
         .select("*")
         .eq("id", userId)
         .single();
 
-      // Fallback to users table if user_profiles doesn't exist
-      if (error && error.code === "42P01") {
-        const { data: oldData, error: oldError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", userId)
-          .single();
-
-        if (!oldError && oldData) {
-          data = {
-            id: oldData.id,
-            email: oldData.email || `${oldData.id}@temp.com`,
-            name: oldData.name,
-            blood_type: oldData.blood_type,
-            latitude: oldData.latitude || 0,
-            longitude: oldData.longitude || 0,
-            is_available: oldData.is_available || true,
-            device_token: oldData.device_token,
-          };
-        }
-      }
-
-      if (data) {
-        setProfile(data as UserProfile);
-      } else {
-        console.log("No profile found for user:", userId);
+      if (donorData && !donorError) {
+        setProfile(donorData as UserProfile);
+      } else if (donorError && donorError.code !== "PGRST116") {
+        console.log("Error fetching profile:", donorError);
       }
     } catch (error) {
       console.log("Fetch profile error:", error);
@@ -83,31 +101,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.log("Session error:", error);
+          if (error.message?.includes("Refresh Token")) {
+            await clearSession();
+            if (isMounted) setLoading(false);
+          }
+          return;
+        }
+
+        if (isMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
+          setLoading(false);
+        }
+      } catch (err) {
+        console.log("Auth init error:", err);
+        if (isMounted) {
+          await clearSession();
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state change:", event);
+
+      if (event === "TOKEN_REFRESHED") {
+        console.log("Token refreshed successfully");
       }
-      setLoading(false);
+
+      if (event === "SIGNED_OUT") {
+        if (isMounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
@@ -117,29 +184,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     try {
-      // Try to update user_profiles table first
-      let error;
       let tableName = "user_profiles";
+      if (profile?.hospital_id) {
+        tableName = "hospital_staff";
+      }
 
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from(tableName)
         .update(updates)
         .eq("id", user.id);
 
-      error = updateError;
-
-      // If user_profiles doesn't exist, try users table
-      if (error && error.code === "42P01") {
-        const { error: oldError } = await supabase
-          .from("users")
-          .update(updates)
-          .eq("id", user.id);
-        error = oldError;
-      }
-
       if (error) throw error;
 
-      // Update local state
       setProfile((prev) => (prev ? { ...prev, ...updates } : null));
       Alert.alert("Sukses", "Profile berhasil diupdate");
     } catch (error: any) {
@@ -148,7 +204,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+      await AsyncStorage.removeItem("supabase.auth.token");
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+    } catch (error) {
+      console.log("Sign out error:", error);
+      await clearSession();
+    }
   };
 
   return (
@@ -161,6 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         signOut,
         updateProfile,
         refreshProfile,
+        clearSession,
       }}
     >
       {children}

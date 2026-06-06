@@ -11,6 +11,7 @@ export default function RootLayout() {
           options={{ title: "Daftar Akun", headerBackTitle: "Kembali" }}
         />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="clear-session" options={{ headerShown: false }} />
       </Stack>
     </AuthProvider>
   );

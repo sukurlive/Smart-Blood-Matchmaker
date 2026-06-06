@@ -27,7 +27,6 @@ export default function HomeScreen() {
   const {
     currentLocation,
     emergencyAlerts,
-    setEmergencyAlerts,
     isAgentActive,
     acceptBloodRequest,
     declineBloodRequest,
@@ -68,9 +67,7 @@ export default function HomeScreen() {
       {
         text: "Ya, Saya Tidak Bisa",
         style: "destructive",
-        onPress: async () => {
-          await declineBloodRequest(alert);
-        },
+        onPress: async () => await declineBloodRequest(alert),
       },
     ]);
   };
@@ -98,10 +95,10 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
+      {/* edges={['left', 'right']} menghilangkan padding top & bottom */}
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
 
-      {/* Header */}
       <View style={styles.headerContainer}>
         <View>
           <Text style={styles.welcomeText}>Halo, Pahlawan!</Text>
@@ -115,8 +112,8 @@ export default function HomeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        style={{ flex: 1 }}
       >
-        {/* Status Card */}
         <View style={styles.statusCard}>
           <View style={styles.statusRow}>
             <View
@@ -147,6 +144,7 @@ export default function HomeScreen() {
         {emergencyAlerts.length > 0 ? (
           emergencyAlerts.map((alert, index) => (
             <View key={alert.requestId || index} style={styles.alertCard}>
+              {/* konten card tetap sama */}
               <View style={styles.alertHeader}>
                 <MaterialCommunityIcons
                   name="alert-decagram"
@@ -167,7 +165,6 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
-
               <View style={styles.mainInfo}>
                 <View style={styles.infoBlock}>
                   <Text style={styles.infoLabel}>Dibutuhkan</Text>
@@ -183,9 +180,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
-
               <View style={styles.divider} />
-
               <View style={styles.hospitalInfo}>
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons
@@ -201,7 +196,6 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
-
               <View style={styles.actionButtons}>
                 <TouchableOpacity
                   style={styles.declineButton}
@@ -210,7 +204,6 @@ export default function HomeScreen() {
                 >
                   <Text style={styles.declineText}>Tidak Bisa</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   style={styles.acceptButton}
                   onPress={() => handleAccept(alert)}
@@ -240,7 +233,7 @@ export default function HomeScreen() {
         )}
       </ScrollView>
 
-      {/* Modal for notes */}
+      {/* Modal tetap sama */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -253,16 +246,14 @@ export default function HomeScreen() {
             <Text style={styles.modalSubtitle}>
               Apakah Anda bersedia menuju {selectedAlert?.hospitalName}?
             </Text>
-
             <TextInput
               style={styles.notesInput}
-              placeholder="Catatan (opsional) - misal: estimasi waktu tiba"
+              placeholder="Catatan (opsional)"
               value={notes}
               onChangeText={setNotes}
               multiline
               numberOfLines={3}
             />
-
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalCancelButton}
@@ -270,7 +261,6 @@ export default function HomeScreen() {
               >
                 <Text style={styles.modalCancelText}>Batal</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.modalConfirmButton}
                 onPress={handleConfirmAccept}
@@ -288,83 +278,155 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8F9FA" },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  scrollContent: { padding: 20 },
-
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scrollContent: {
+    paddingHorizontal: 20, // Hanya padding horizontal
+    paddingTop: 0, // Hilangkan padding top
+    paddingBottom: 0, // Hilangkan padding bottom
+  },
   headerContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 25,
-    paddingHorizontal: 5,
+    marginBottom: 15, // Kurangi dari 25 ke 15
+    marginTop: 10, // Tambahkan margin top kecil
+    paddingHorizontal: 20, // Padding horizontal
   },
-  welcomeText: { fontSize: 16, color: "#666" },
-  userName: { fontSize: 22, fontWeight: "bold", color: "#1A1A1A" },
+  welcomeText: {
+    fontSize: 14, // Kurangi dari 16
+    color: "#666",
+  },
+  userName: {
+    fontSize: 20, // Kurangi dari 22
+    fontWeight: "bold",
+    color: "#1A1A1A",
+  },
   bloodBadge: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 45, // Kurangi dari 50
+    height: 45, // Kurangi dari 50
+    borderRadius: 22.5,
     backgroundColor: "#D32F2F",
     justifyContent: "center",
     alignItems: "center",
     elevation: 4,
   },
-  bloodType: { color: "#FFF", fontSize: 18, fontWeight: "bold" },
-
+  bloodType: {
+    color: "#FFF",
+    fontSize: 16, // Kurangi dari 18
+    fontWeight: "bold",
+  },
   statusCard: {
     backgroundColor: "#FFF",
-    padding: 15,
+    padding: 12, // Kurangi dari 15
     borderRadius: 16,
     elevation: 2,
-    marginBottom: 25,
+    marginBottom: 20, // Kurangi dari 25
   },
-  statusRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#444" },
-  locationContainer: { flexDirection: "row", alignItems: "center" },
-  locationText: { fontSize: 12, color: "#888", marginLeft: 4 },
-
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6, // Kurangi dari 8
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#444",
+  },
+  locationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  locationText: {
+    fontSize: 12,
+    color: "#888",
+    marginLeft: 4,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#1A1A1A",
-    marginBottom: 15,
+    marginBottom: 12, // Kurangi dari 15
   },
-
   alertCard: {
     backgroundColor: "#FFF",
     borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
+    padding: 16, // Kurangi dari 20
+    marginBottom: 16, // Kurangi dari 20
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
-  alertHeader: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  headerTextContainer: { flex: 1, marginLeft: 10 },
-  urgentTag: { fontWeight: "800", fontSize: 14 },
-  requestId: { fontSize: 10, color: "#999", marginTop: 2 },
-
+  alertHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16, // Kurangi dari 20
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  urgentTag: {
+    fontWeight: "800",
+    fontSize: 14,
+  },
+  requestId: {
+    fontSize: 10,
+    color: "#999",
+    marginTop: 2,
+  },
   mainInfo: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginBottom: 20,
+    marginBottom: 16, // Kurangi dari 20
   },
-  infoBlock: { flex: 1, alignItems: "center" },
-  borderLeft: { borderLeftWidth: 1, borderLeftColor: "#EEE" },
-  infoLabel: { fontSize: 12, color: "#888", marginBottom: 4 },
-  infoValue: { fontSize: 24, fontWeight: "bold", color: "#1A1A1A" },
-  infoUnit: { fontSize: 14, fontWeight: "normal", color: "#666" },
-
-  divider: { height: 1, backgroundColor: "#F0F0F0", marginBottom: 20 },
-
+  infoBlock: {
+    flex: 1,
+    alignItems: "center",
+  },
+  borderLeft: {
+    borderLeftWidth: 1,
+    borderLeftColor: "#EEE",
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: "#888",
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 22, // Kurangi dari 24
+    fontWeight: "bold",
+    color: "#1A1A1A",
+  },
+  infoUnit: {
+    fontSize: 12, // Kurangi dari 14
+    fontWeight: "normal",
+    color: "#666",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#F0F0F0",
+    marginBottom: 16, // Kurangi dari 20
+  },
   hospitalInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 25,
+    marginBottom: 20, // Kurangi dari 25
   },
   iconCircle: {
     width: 40,
@@ -375,28 +437,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  hospitalName: { fontSize: 16, fontWeight: "bold", color: "#1A1A1A" },
-  distanceText: { fontSize: 13, color: "#666", marginTop: 2 },
-
-  actionButtons: { flexDirection: "row", gap: 12 },
+  hospitalName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1A1A1A",
+  },
+  distanceText: {
+    fontSize: 13,
+    color: "#666",
+    marginTop: 2,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
   declineButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10, // Kurangi dari 12
     borderRadius: 12,
     backgroundColor: "#F5F5F5",
     alignItems: "center",
   },
-  declineText: { color: "#666", fontWeight: "600" },
+  declineText: {
+    color: "#666",
+    fontWeight: "600",
+  },
   acceptButton: {
     flex: 2,
-    paddingVertical: 12,
+    paddingVertical: 10, // Kurangi dari 12
     borderRadius: 12,
     backgroundColor: "#D32F2F",
     alignItems: "center",
   },
-  acceptText: { color: "#FFF", fontWeight: "bold", fontSize: 15 },
-
-  emptyState: { alignItems: "center", marginTop: 40, paddingHorizontal: 40 },
+  acceptText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 14, // Kurangi dari 15
+  },
+  emptyState: {
+    alignItems: "center",
+    marginTop: 40,
+    paddingHorizontal: 40,
+  },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "bold",
@@ -410,8 +492,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
   },
-
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -423,11 +503,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     width: "85%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
   modalTitle: {
     fontSize: 18,
@@ -452,7 +527,10 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
     fontSize: 14,
   },
-  modalButtons: { flexDirection: "row", gap: 12 },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
   modalCancelButton: {
     flex: 1,
     paddingVertical: 12,
@@ -460,7 +538,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F5F5",
     alignItems: "center",
   },
-  modalCancelText: { color: "#666", fontWeight: "600" },
+  modalCancelText: {
+    color: "#666",
+    fontWeight: "600",
+  },
   modalConfirmButton: {
     flex: 2,
     paddingVertical: 12,
@@ -468,5 +549,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#D32F2F",
     alignItems: "center",
   },
-  modalConfirmText: { color: "#FFF", fontWeight: "bold", fontSize: 14 },
+  modalConfirmText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
 });

@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -20,7 +21,6 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const { session } = useAuth();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (session) {
       router.replace("/(tabs)/home");
@@ -51,46 +51,57 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <View style={styles.innerContainer}>
-        <Text style={styles.title}>Blood Hero App</Text>
-        <Text style={styles.subtitle}>Login untuk melanjutkan</Text>
+        {/* Logo / Icon Section */}
+        <View style={styles.logoContainer}>
+          <MaterialCommunityIcons name="blood-bag" size={60} color="#D32F2F" />
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          editable={!loading}
-        />
+        {/* Title Section */}
+        <Text style={styles.title}>Smart Blood Matchmaker</Text>
+        <Text style={styles.subtitle}>
+          Sistem Informasi Donor Darah Darurat
+        </Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
+        {/* Form Section */}
+        <View style={styles.formContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            editable={!loading}
+          />
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.buttonText}>Login</Text>
-          )}
-        </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            editable={!loading}
+          />
 
-        <TouchableOpacity
-          onPress={() => router.push("/register")}
-          disabled={loading}
-        >
-          <Text style={styles.registerText}>Belum punya akun? Register</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.buttonText}>Login</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/register")}
+            disabled={loading}
+          >
+            <Text style={styles.registerText}>Belum punya akun? Register</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -98,19 +109,42 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
-  innerContainer: { flex: 1, justifyContent: "center", padding: 20 },
+  innerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+  },
+
+  // Logo Container
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  appName: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#D32F2F",
+    marginTop: 8,
+  },
+
+  // Title Section
   title: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 10,
-    color: "#D32F2F",
+    marginBottom: 8,
+    color: "#333",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: "center",
     marginBottom: 40,
     color: "#666",
+  },
+
+  // Form Section
+  formContainer: {
+    marginTop: 20,
   },
   input: {
     backgroundColor: "#FFF",
@@ -127,7 +161,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  buttonText: { color: "#FFF", fontWeight: "bold", fontSize: 16 },
+  buttonText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
   registerText: {
     textAlign: "center",
     marginTop: 20,
