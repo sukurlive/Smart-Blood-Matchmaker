@@ -73,11 +73,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           phone: staffData.phone,
           hospital_id: staffData.hospital_id,
           hospital_name: staffData.hospitals?.name,
-          role: staffData.role,
+          role: staffData.role || "staff", // ✅ Perbaiki: hanya satu role
         });
         return;
       }
 
+      // Jika bukan staff, cek user_profiles (donor)
       const { data: donorData, error: donorError } = await supabase
         .from("user_profiles")
         .select("*")
@@ -85,7 +86,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         .single();
 
       if (donorData && !donorError) {
-        setProfile(donorData as UserProfile);
+        setProfile({
+          ...donorData,
+          role: donorData.role || "donor", // ✅ Tambahkan role default donor
+        } as UserProfile);
       } else if (donorError && donorError.code !== "PGRST116") {
         console.log("Error fetching profile:", donorError);
       }

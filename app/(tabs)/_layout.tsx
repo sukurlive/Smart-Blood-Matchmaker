@@ -36,6 +36,7 @@ export default function TabLayout() {
   };
 
   const isHospital = !!profile?.hospital_id;
+  const isAdmin = profile?.role === "admin";
 
   const HeaderLeft = () => (
     <View
@@ -58,7 +59,6 @@ export default function TabLayout() {
     </View>
   );
 
-  // Header kanan: Tombol Logout
   const HeaderRight = () => (
     <TouchableOpacity onPress={handleLogout} style={{ marginRight: 15 }}>
       <Ionicons name="log-out-outline" size={24} color="#D32F2F" />
@@ -81,7 +81,41 @@ export default function TabLayout() {
         tabBarInactiveTintColor: "#999",
       }}
     >
-      {/* Donor Tabs - hanya muncul jika BUKAN hospital */}
+      {/* ADMIN TABS - hanya muncul jika admin */}
+      <Tabs.Screen
+        name="admin-dashboard"
+        options={{
+          title: "Admin",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="shield" size={size} color={color} />
+          ),
+          href: isAdmin ? undefined : null,
+        }}
+      />
+
+      {/* HOSPITAL TABS - hanya muncul jika hospital */}
+      <Tabs.Screen
+        name="hospital-dashboard"
+        options={{
+          title: "Dashboard",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="business" size={size} color={color} />
+          ),
+          href: isHospital && !isAdmin ? undefined : null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="admin-requests"
+        options={{
+          title: "Requests",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="alert-circle" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* DONOR TABS - hanya muncul jika donor (bukan admin & bukan hospital) */}
       <Tabs.Screen
         name="home"
         options={{
@@ -89,7 +123,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
-          href: isHospital ? null : undefined,
+          href: !isHospital && !isAdmin ? undefined : null,
         }}
       />
 
@@ -100,7 +134,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
           ),
-          href: isHospital ? null : undefined,
+          href: !isHospital && !isAdmin ? undefined : null,
         }}
       />
 
@@ -111,27 +145,15 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="time" size={size} color={color} />
           ),
-          href: isHospital ? null : undefined,
+          href: !isHospital && !isAdmin ? undefined : null,
         }}
       />
 
-      {/* Hospital Tab - hanya muncul jika hospital */}
-      <Tabs.Screen
-        name="hospital-dashboard"
-        options={{
-          title: "Dashboard RS",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="business" size={size} color={color} />
-          ),
-          href: isHospital ? undefined : null,
-        }}
-      />
-
-      {/* Profile Tab - muncul untuk semua */}
+      {/* Profile Tab - untuk semua user */}
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: "Profil",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
@@ -139,13 +161,7 @@ export default function TabLayout() {
       />
 
       {/* Hidden screens */}
-      <Tabs.Screen
-        name="edit-profile"
-        options={{
-          href: null,
-          title: "Edit Profil",
-        }}
-      />
+      <Tabs.Screen name="edit-profile" options={{ href: null }} />
     </Tabs>
   );
 }
