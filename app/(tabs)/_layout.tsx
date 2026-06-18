@@ -112,6 +112,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="alert-circle" size={size} color={color} />
           ),
+          href:  isAdmin ? undefined : null,
+
         }}
       />
 
@@ -134,10 +136,19 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
           ),
+          href: !isHospital && !isAdmin && isAdmin  ? undefined : null,
+        }}
+      />
+<Tabs.Screen
+        name="forum-donor"
+        options={{
+          title: "Forum",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubbles" size={size} color={color} />
+          ),
           href: !isHospital && !isAdmin ? undefined : null,
         }}
       />
-
       <Tabs.Screen
         name="history"
         options={{

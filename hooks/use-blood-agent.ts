@@ -23,6 +23,8 @@ export interface EmergencyAlert {
   bloodType: string;
   requestId: string;
   urgencyLevel?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface BloodAgentResult {
@@ -165,6 +167,8 @@ export const useBloodAgent = (userProfile: UserProfile): BloodAgentResult => {
             bloodType: req.blood_type,
             requestId: req.request_id,
             urgencyLevel: req.urgency_level,
+            latitude: req.lat,
+            longitude: req.lng,
           });
       }
       setEmergencyAlerts(alerts);
