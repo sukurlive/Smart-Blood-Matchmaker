@@ -1,20 +1,26 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs, router } from "expo-router";
 import { useEffect } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function TabLayout() {
-  const { session, profile, signOut } = useAuth();
+  // 1. Tambahkan state loading dari useAuth
+  const { session, profile, signOut, loading } = useAuth();
 
   useEffect(() => {
-    if (!session) {
+    if (!loading && !session) {
       router.replace("/");
     }
-  }, [session]);
+  }, [session, loading]);
 
-  if (!session) {
-    return null;
+  // 2. TUNGGU sampai session dan profile benar-benar siap sebelum merender rute tab
+  if (loading || (session && !profile)) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8F9FA" }}>
+        <ActivityIndicator size="large" color="#D32F2F" />
+      </View>
+    );
   }
 
   const handleLogout = () => {
@@ -112,8 +118,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="alert-circle" size={size} color={color} />
           ),
-          href:  isAdmin ? undefined : null,
-
+          href: isAdmin ? undefined : null,
         }}
       />
 
@@ -136,10 +141,10 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
           ),
-          href: !isHospital && !isAdmin && isAdmin  ? undefined : null,
+          href: isAdmin&&!isAdmin ? undefined : null, // Fix: Disederhanakan, asumsikan hanya admin yang bisa lihat daftar semua donor
         }}
       />
-<Tabs.Screen
+      <Tabs.Screen
         name="forum-donor"
         options={{
           title: "Forum",

@@ -43,8 +43,21 @@ export default function ProfileScreen() {
   const [badges, setBadges] = useState<EarnedBadge[]>([]);
   const [badgesLoading, setBadgesLoading] = useState(true);
 
+  // Identifikasi Role User
+  const isHospital = !!profile?.hospital_id;
+  const isAdmin = profile?.role === "admin" || profile?.role === "Admin";
+
   const fetchData = async () => {
     if (!profile?.id) return;
+    
+    // Jika user adalah admin atau rumah sakit, kita tidak perlu menarik data statistik/lencana
+    if (isAdmin || isHospital) {
+      setStatsLoading(false);
+      setBadgesLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     try {
       // 1. Fetch Statistik
       const { data: statsData, error: statsError } = await supabase
@@ -78,7 +91,7 @@ export default function ProfileScreen() {
       if (badgesError) {
         console.error("Error badges:", badgesError);
       } else if (badgesData) {
-        setBadges(badgesData as any); // Type assertion untuk struktur Supabase join
+        setBadges(badgesData as any);
       }
     } catch (error: any) {
       console.error("Gagal memuat data profile:", error.message);
@@ -91,12 +104,12 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     fetchData();
-  }, [profile?.id]);
+  }, [profile?.id, isAdmin, isHospital]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchData();
-  }, [profile?.id]);
+  }, [profile?.id, isAdmin, isHospital]);
 
   const handleToggleAvailability = async (value: boolean) => {
     setIsAvailable(value);
@@ -124,8 +137,6 @@ export default function ProfileScreen() {
     );
   }
 
-  const isHospital = !!profile.hospital_id;
-
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <ScrollView
@@ -139,14 +150,20 @@ export default function ProfileScreen() {
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {isHospital ? "🏥" : profile.blood_type || "?"}
+                {isHospital ? "🏥" : isAdmin ? "🛡️" : profile.blood_type || "?"}
               </Text>
             </View>
           </View>
           <Text style={styles.name}>{profile.name}</Text>
           <Text style={styles.email}>{profile.email}</Text>
+          
           {isHospital && (
-            <Text style={styles.hospitalBadge}>{profile.hospital_name}</Text>
+            <Text style={styles.roleBadge}>{profile.hospital_name}</Text>
+          )}
+          {isAdmin && (
+            <Text style={[styles.roleBadge, { backgroundColor: '#FEEBEE', color: '#D32F2F' }]}>
+              Administrator
+            </Text>
           )}
 
           <TouchableOpacity
@@ -158,7 +175,8 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {!isHospital && (
+        {/* HANYA TAMPIL JIKA BUKAN HOSPITAL & BUKAN ADMIN (Pendonor Biasa) */}
+        {!isHospital && !isAdmin && (
           <>
             {/* Bagian Statistik */}
             <View style={styles.section}>
@@ -217,48 +235,56 @@ export default function ProfileScreen() {
                 </View>
               )}
             </View>
-
-            {/* Bagian Informasi Pribadi */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Informasi Pribadi</Text>
-              {profile.phone && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Telepon</Text>
-                  <Text style={styles.infoValue}>{profile.phone}</Text>
-                </View>
-              )}
-              {profile.address && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Alamat</Text>
-                  <Text style={styles.infoValue}>{profile.address}</Text>
-                </View>
-              )}
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Golongan Darah</Text>
-                <Text style={styles.infoValue}>{profile.blood_type}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Status</Text>
-                <View style={styles.statusRow}>
-                  <Switch
-                    value={isAvailable}
-                    onValueChange={handleToggleAvailability}
-                    disabled={updating}
-                    trackColor={{ false: "#767577", true: "#4CAF50" }}
-                    thumbColor={isAvailable ? "#FFF" : "#F4F3F4"}
-                  />
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: isAvailable ? "#4CAF50" : "#999" },
-                    ]}
-                  >
-                    {isAvailable ? "Siap Donor" : "Sedang Tidak Tersedia"}
-                  </Text>
-                </View>
-              </View>
-            </View>
           </>
+        )}
+
+        {/* TAMPIL JIKA BUKAN HOSPITAL (Admin dan Pendonor sama-sama bisa lihat info pribadi) */}
+        {!isHospital && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Informasi Pribadi</Text>
+            {profile.phone && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Telepon</Text>
+                <Text style={styles.infoValue}>{profile.phone}</Text>
+              </View>
+            )}
+            {profile.address && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Alamat</Text>
+                <Text style={styles.infoValue}>{profile.address}</Text>
+              </View>
+            )}
+            
+            {/* Sembunyikan golongan darah dan status donor khusus untuk Admin */}
+            {!isAdmin && (
+              <>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Golongan Darah</Text>
+                  <Text style={styles.infoValue}>{profile.blood_type}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Status</Text>
+                  <View style={styles.statusRow}>
+                    <Switch
+                      value={isAvailable}
+                      onValueChange={handleToggleAvailability}
+                      disabled={updating}
+                      trackColor={{ false: "#767577", true: "#4CAF50" }}
+                      thumbColor={isAvailable ? "#FFF" : "#F4F3F4"}
+                    />
+                    <Text
+                      style={[
+                        styles.statusText,
+                        { color: isAvailable ? "#4CAF50" : "#999" },
+                      ]}
+                    >
+                      {isAvailable ? "Siap Donor" : "Sedang Tidak Tersedia"}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
         )}
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -295,7 +321,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 28, fontWeight: "bold", color: "#FFF" },
   name: { fontSize: 20, fontWeight: "bold", color: "#333" },
   email: { fontSize: 13, color: "#666", marginTop: 3 },
-  hospitalBadge: {
+  roleBadge: {
     backgroundColor: "#E3F2FD",
     paddingHorizontal: 10,
     paddingVertical: 3,
@@ -303,6 +329,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 11,
     color: "#1976D2",
+    fontWeight: "bold",
   },
   editButton: {
     flexDirection: "row",
@@ -323,8 +350,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     marginHorizontal: 16,
-    elevation: 1, // Sedikit bayangan di Android
-    shadowColor: "#000", // Bayangan di iOS
+    elevation: 1,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -341,7 +368,6 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: "#666", marginTop: 4, fontWeight: "500" },
   divider: { width: 1, height: 40, backgroundColor: "#E0E0E0" },
   
-  // Style Baru untuk Lencana
   badgeContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -349,13 +375,13 @@ const styles = StyleSheet.create({
   },
   badgeItem: {
     alignItems: "center",
-    width: 80, // Mengontrol lebar tiap lencana agar rapi
+    width: 80,
   },
   badgeIconCircle: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#FFF8E1", // Warna latar belakang keemasan tipis
+    backgroundColor: "#FFF8E1",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
