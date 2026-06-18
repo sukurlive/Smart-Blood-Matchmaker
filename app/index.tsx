@@ -19,14 +19,28 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { session } = useAuth();
 
-  useEffect(() => {
-    if (session) {
+
+const { session, profile, loading: authLoading } = useAuth(); 
+
+ useEffect(() => {
+    // 1. Jika belum login (tidak ada session), diam saja
+    if (!session) return;
+
+    // 2. Jika sudah login TAPI data profile masih kosong/loading, TUNGGU!
+    if (authLoading || !profile) return;
+
+    // 3. Cek data di console komputer/terminal untuk memastikan isinya
+    console.log("Data Profile Saat Login:", profile);
+    console.log("Role User Ini:", profile.role);
+
+    // 4. Baru lakukan pengecekan rute (Pastikan huruf kecil/besar sama persis)
+    if (profile.role === "admin" || profile.role === "Admin") {
+      router.replace("/(tabs)/admin-dashboard");
+    } else {
       router.replace("/(tabs)/home");
     }
-  }, [session]);
-
+  }, [session, profile, authLoading]);
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Email dan password harus diisi");
