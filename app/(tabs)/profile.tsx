@@ -175,7 +175,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* HANYA TAMPIL JIKA BUKAN HOSPITAL & BUKAN ADMIN (Pendonor Biasa) */}
+        {/* HANYA TAMPIL JIKA PENDONOR (Bukan Hospital & Bukan Admin) */}
         {!isHospital && !isAdmin && (
           <>
             {/* Bagian Statistik */}
@@ -235,56 +235,49 @@ export default function ProfileScreen() {
                 </View>
               )}
             </View>
-          </>
-        )}
 
-        {/* TAMPIL JIKA BUKAN HOSPITAL (Admin dan Pendonor sama-sama bisa lihat info pribadi) */}
-        {!isHospital && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Informasi Pribadi</Text>
-            {profile.phone && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Telepon</Text>
-                <Text style={styles.infoValue}>{profile.phone}</Text>
-              </View>
-            )}
-            {profile.address && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Alamat</Text>
-                <Text style={styles.infoValue}>{profile.address}</Text>
-              </View>
-            )}
-            
-            {/* Sembunyikan golongan darah dan status donor khusus untuk Admin */}
-            {!isAdmin && (
-              <>
+            {/* Informasi Pribadi */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Informasi Pribadi</Text>
+              {profile.phone && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Golongan Darah</Text>
-                  <Text style={styles.infoValue}>{profile.blood_type}</Text>
+                  <Text style={styles.infoLabel}>Telepon</Text>
+                  <Text style={styles.infoValue}>{profile.phone}</Text>
                 </View>
+              )}
+              {profile.address && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Status</Text>
-                  <View style={styles.statusRow}>
-                    <Switch
-                      value={isAvailable}
-                      onValueChange={handleToggleAvailability}
-                      disabled={updating}
-                      trackColor={{ false: "#767577", true: "#4CAF50" }}
-                      thumbColor={isAvailable ? "#FFF" : "#F4F3F4"}
-                    />
-                    <Text
-                      style={[
-                        styles.statusText,
-                        { color: isAvailable ? "#4CAF50" : "#999" },
-                      ]}
-                    >
-                      {isAvailable ? "Siap Donor" : "Sedang Tidak Tersedia"}
-                    </Text>
-                  </View>
+                  <Text style={styles.infoLabel}>Alamat</Text>
+                  <Text style={styles.infoValue}>{profile.address}</Text>
                 </View>
-              </>
-            )}
-          </View>
+              )}
+              
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Golongan Darah</Text>
+                <Text style={styles.infoValue}>{profile.blood_type}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Status</Text>
+                <View style={styles.statusRow}>
+                  <Switch
+                    value={isAvailable}
+                    onValueChange={handleToggleAvailability}
+                    disabled={updating}
+                    trackColor={{ false: "#767577", true: "#4CAF50" }}
+                    thumbColor={isAvailable ? "#FFF" : "#F4F3F4"}
+                  />
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: isAvailable ? "#4CAF50" : "#999" },
+                    ]}
+                  >
+                    {isAvailable ? "Siap Donor" : "Sedang Tidak Tersedia"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </>
         )}
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

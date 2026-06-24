@@ -311,8 +311,8 @@ export default function AdminRequestsScreen() {
         </View>
       </View>
 
-      {/* SINGLE MODAL LIST EMERGENCY (MIRIP HOME PENDONOR) */}
-      <Modal
+
+  <Modal
         animationType="slide"
         transparent={true}
         visible={!!selectedHospitalName}
@@ -322,83 +322,81 @@ export default function AdminRequestsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.dialogContainer}>
-            <View style={{ flexShrink: 1 }}>
-              
-              {/* Header Dialog List */}
-              <View style={styles.dialogHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.dialogHospitalName}>{selectedHospitalName}</Text>
-                  <Text style={styles.dialogSubTitle}>
-                    Ada {filteredRequests.length} riwayat permintaan di RS ini
-                  </Text>
-                </View>
-                <TouchableOpacity 
-                  style={styles.closeDialogButton} 
-                  onPress={() => setSelectedHospitalName(null)}
-                >
-                  <Ionicons name="close-circle" size={28} color="#999" />
-                </TouchableOpacity>
+            
+            {/* Header Dialog List (Tidak lagi dibungkus flexShrink: 1) */}
+            <View style={styles.dialogHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dialogHospitalName}>{selectedHospitalName}</Text>
+                <Text style={styles.dialogSubTitle}>
+                  Ada {filteredRequests.length} riwayat permintaan di RS ini
+                </Text>
               </View>
-
-              {/* List Request */}
-              <ScrollView 
-                style={styles.dialogScrollView}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.dialogScrollContent}
+              <TouchableOpacity 
+                style={styles.closeDialogButton} 
+                onPress={() => setSelectedHospitalName(null)}
               >
-                {filteredRequests.length > 0 ? (
-                  filteredRequests.map((req, index) => (
-                    <View key={req.id || index} style={styles.alertCard}>
-                      <View style={styles.alertHeaderCard}>
-                        <MaterialCommunityIcons
-                          name="alert-decagram"
-                          size={22}
-                          color={getUrgencyColor(req.urgency_level)}
-                        />
-                        <View style={styles.headerTextContainer}>
-                          <Text style={[styles.urgentTag, { color: getUrgencyColor(req.urgency_level) }]}>
-                            {getUrgencyText(req.urgency_level)}
-                          </Text>
-                          <Text style={styles.requestId}>ID: {req.id.slice(-8)}</Text>
-                        </View>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(req.status) }]}>
-                           <Text style={styles.statusText}>{req.status}</Text>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.mainInfo}>
-                        <View style={styles.infoBlock}>
-                          <Text style={styles.infoLabel}>Dibutuhkan</Text>
-                          <Text style={styles.infoValue}>
-                            {req.bags_needed} <Text style={styles.infoUnit}>Kantong</Text>
-                          </Text>
-                        </View>
-                        <View style={[styles.infoBlock, styles.borderLeft]}>
-                          <Text style={styles.infoLabel}>Gol. Darah</Text>
-                          <Text style={[styles.infoValue, { color: "#D32F2F" }]}>{req.required_blood}</Text>
-                        </View>
-                      </View>
-                      
-                      {req.status === "Active" && (
-                        <View style={styles.actionButtons}>
-                          <TouchableOpacity
-                            style={styles.declineButton}
-                            onPress={() => updateStatus(req.id, "InActive")}
-                          >
-                            <Ionicons name="power" size={16} color="#666" />
-                            <Text style={styles.declineText}>Non-aktifkan Request</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </View>
-                  ))
-                ) : (
-                  <View style={styles.emptyCardContainer}>
-                     <Text style={styles.emptyText}>Tidak ada request di lokasi ini.</Text>
-                  </View>
-                )}
-              </ScrollView>
+                <Ionicons name="close-circle" size={28} color="#999" />
+              </TouchableOpacity>
             </View>
+
+            {/* List Request */}
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.dialogScrollContent}
+            >
+              {filteredRequests.length > 0 ? (
+                filteredRequests.map((req, index) => (
+                  <View key={req.id || index} style={styles.alertCard}>
+                    <View style={styles.alertHeaderCard}>
+                      <MaterialCommunityIcons
+                        name="alert-decagram"
+                        size={22}
+                        color={getUrgencyColor(req.urgency_level)}
+                      />
+                      <View style={styles.headerTextContainer}>
+                        <Text style={[styles.urgentTag, { color: getUrgencyColor(req.urgency_level) }]}>
+                          {getUrgencyText(req.urgency_level)}
+                        </Text>
+                        <Text style={styles.requestId}>ID: {req.id.slice(-8).toUpperCase()}</Text>
+                      </View>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(req.status) }]}>
+                         <Text style={styles.statusText}>{req.status}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.mainInfo}>
+                      <View style={styles.infoBlock}>
+                        <Text style={styles.infoLabel}>Dibutuhkan</Text>
+                        <Text style={styles.infoValue}>
+                          {req.bags_needed} <Text style={styles.infoUnit}>Kantong</Text>
+                        </Text>
+                      </View>
+                      <View style={[styles.infoBlock, styles.borderLeft]}>
+                        <Text style={styles.infoLabel}>Gol. Darah</Text>
+                        <Text style={[styles.infoValue, { color: "#D32F2F" }]}>{req.required_blood}</Text>
+                      </View>
+                    </View>
+                    
+                    {req.status === "Active" && (
+                      <View style={styles.actionButtons}>
+                        <TouchableOpacity
+                          style={styles.declineButton}
+                          onPress={() => updateStatus(req.id, "InActive")}
+                        >
+                          <Ionicons name="power" size={16} color="#666" />
+                          <Text style={styles.declineText}>Non-aktifkan Request</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyCardContainer}>
+                   <Text style={styles.emptyText}>Tidak ada request di lokasi ini.</Text>
+                </View>
+              )}
+            </ScrollView>
+
           </View>
         </View>
       </Modal>
