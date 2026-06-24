@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "SmartBloodMatchMaker",
-    "slug": "SmartBloodMatchMaker",
+    "slug": "bloodhero",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -20,7 +20,13 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAFASU0OFTfD8ehoiebGbiR3_-uXh_qUgI"
+        }
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.jabarreza232sorganization.bloodhero"
     },
     "web": {
       "output": "static",
@@ -44,6 +50,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d2e9d8d3-0baf-4f6c-a267-d7bef58ebd46"
+      }
+    },
+    "owner": "jabarreza232s-organization"
   }
 }
