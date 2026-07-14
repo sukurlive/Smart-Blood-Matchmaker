@@ -14,7 +14,7 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import MapView, { Marker, Region, Circle } from "react-native-maps";
+import MapView, { Marker, Circle } from "react-native-maps";
 import { useAuth } from "../../contexts/AuthContext";
 import { EmergencyAlert, useBloodAgent } from "../../hooks/use-blood-agent";
 import { supabase } from "../../supabase";
@@ -25,24 +25,19 @@ export default function HomeScreen() {
   const { profile, loading: authLoading } = useAuth();
   const mapRef = useRef<MapView>(null);
   
-  // State untuk konfirmasi kehadiran (Notes)
   const [selectedAlert, setSelectedAlert] = useState<EmergencyAlert | null>(null);
   const [notes, setNotes] = useState("");
-
-  // State untuk Bottom Sheet RS
   const [selectedHospitalName, setSelectedHospitalName] = useState<string | null>(null);
   const [filteredAlerts, setFilteredAlerts] = useState<EmergencyAlert[]>([]);
-const getUrgencyText = (level?: string) => {
+  
+  const getUrgencyText = (level?: string) => {
     switch (level?.toLowerCase()) {
-      case "critical": 
-        return "KRITIS";
-      case "high": 
-        return "TINGGI";
-      case "normal": 
-      default: 
-        return "NORMAL";
+      case "critical": return "KRITIS";
+      case "high": return "TINGGI";
+      case "normal": default: return "NORMAL";
     }
   };
+
   const {
     currentLocation,
     emergencyAlerts,
@@ -65,7 +60,6 @@ const getUrgencyText = (level?: string) => {
     );
   }
 
-  // --- FUNGSI AKSI DONOR ---
   const handleAccept = (alert: EmergencyAlert) => {
     setSelectedAlert(alert);
     setNotes("");
@@ -76,18 +70,30 @@ const getUrgencyText = (level?: string) => {
       await acceptBloodRequest(selectedAlert, notes);
 
       try {
-        const { error } = await supabase.from("humanity_points").insert({
+        const { error: pointsError } = await supabase.from("humanity_points").insert({
           user_id: profile.id,
           points: 50,
           reason: `Bersedia membantu permintaan darah di ${selectedAlert.hospitalName}`,
         });
-        if (error) throw error;
+        
+        if (pointsError) throw pointsError;
+
+        const newBagsNeeded = selectedAlert.bagsNeeded > 0 ? selectedAlert.bagsNeeded - 1 : 0;
+        
+        const { error: updateError } = await supabase
+          .from("blood_requests")
+          .update({ bags_needed: newBagsNeeded })
+          .eq("id", selectedAlert.requestId);
+
+        if (updateError) {
+          console.error("Gagal mengupdate kantong darah:", updateError.message);
+        }
       } catch (err: any) {
-        console.error("Gagal menambahkan poin otomatis:", err.message);
+        console.error("Terjadi kesalahan:", err.message);
       }
       
       const updatedList = filteredAlerts.filter(item => item.requestId !== selectedAlert.requestId);
-      if(updatedList.length === 0) {
+      if (updatedList.length === 0) {
         setSelectedHospitalName(null);
       } else {
         setFilteredAlerts(updatedList);
@@ -107,7 +113,7 @@ const getUrgencyText = (level?: string) => {
         onPress: async () => {
           await declineBloodRequest(alert);
           const updatedList = filteredAlerts.filter(item => item.requestId !== alert.requestId);
-          if(updatedList.length === 0) {
+          if (updatedList.length === 0) {
             setSelectedHospitalName(null);
           } else {
             setFilteredAlerts(updatedList);
@@ -117,7 +123,6 @@ const getUrgencyText = (level?: string) => {
     ]);
   };
 
-  // --- FUNGSI PETA ---
   const handleMarkerPress = (hospitalName: string) => {
     const alertsForHospital = emergencyAlerts.filter(
       (alert) => alert.hospitalName === hospitalName
@@ -150,10 +155,8 @@ const getUrgencyText = (level?: string) => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* PETA FULL SCREEN (Layer Paling Bawah) */}
       {currentLocation ? (
-        
-  <MapView
+        <MapView
           ref={mapRef}
           style={styles.map}
           initialRegion={{
@@ -165,21 +168,17 @@ const getUrgencyText = (level?: string) => {
           showsUserLocation={true}
           showsMyLocationButton={false}
         >
-          {/* Tambahkan komponen Circle di sini untuk memvisualisasikan radius 5km */}
-          {currentLocation && (
-            <Circle
-              center={{
-                latitude: currentLocation.latitude,
-                longitude: currentLocation.longitude,
-              }}
-              radius={5000} // 5000 meter = 5 km
-              strokeWidth={2}
-              strokeColor="rgba(211, 47, 47, 0.4)" // Warna garis tepi merah transparan
-              fillColor="rgba(211, 47, 47, 0.08)"  // Area dalam dengan warna sangat lembut
-            />
-          )}
+          <Circle
+            center={{
+              latitude: currentLocation.latitude,
+              longitude: currentLocation.longitude,
+            }}
+            radius={5000}
+            strokeWidth={2}
+            strokeColor="rgba(211, 47, 47, 0.4)"
+            fillColor="rgba(211, 47, 47, 0.08)"
+          />
 
-          {/* Marker Rumah Sakit */}
           {Array.from(new Set(emergencyAlerts.map(a => a.hospitalName))).map((hospName) => {
             const sampleAlert = emergencyAlerts.find(a => a.hospitalName === hospName);
             if (!sampleAlert?.latitude || !sampleAlert?.longitude) return null;
@@ -194,7 +193,7 @@ const getUrgencyText = (level?: string) => {
                 <View style={styles.customMarker}>
                   <MaterialCommunityIcons name="hospital-marker" size={42} color="#D32F2F" />
                   <View style={styles.markerBadge}>
-                    <Text style={styles.markerBadgeText}>{count}</Text>
+                    <Text style={styles.markerBadgeText}>{count.toString()}</Text>
                   </View>
                 </View>
               </Marker>
@@ -208,10 +207,7 @@ const getUrgencyText = (level?: string) => {
         </View>
       )}
 
-      {/* FLOATING HEADER AREA */}
       <SafeAreaView style={styles.floatingUIContainer} pointerEvents="box-none">
-        
-        {/* Header Profil */}
         <View style={styles.headerCard}>
           <View style={styles.headerTextContainer}>
             <Text style={styles.welcomeText}>Halo, Pahlawan!</Text>
@@ -222,34 +218,30 @@ const getUrgencyText = (level?: string) => {
           </View>
         </View>
 
-        {/* Status GPS Pill */}
         <View style={styles.statusPill}>
           <View style={[styles.dot, { backgroundColor: isAgentActive ? "#4CAF50" : "#FF5252" }]} />
           <Text style={styles.statusText}>
             {isAgentActive ? "Radar Memantau" : "GPS Terputus"}
           </Text>
         </View>
-
       </SafeAreaView>
 
-      {/* FLOATING BUTTONS (Bottom Right) */}
       <View style={styles.floatingControls} pointerEvents="box-none">
         <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}>
           <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#333" />
         </TouchableOpacity>
       </View>
 
-      {/* BOTTOM INFO BAR (Jika tidak ada RS yang diklik) */}
-      {!selectedHospitalName && emergencyAlerts.length > 0 && (
+      {/* Bagian ini sudah diubah menggunakan ternary agar aman */}
+      {(!selectedHospitalName && emergencyAlerts.length > 0) ? (
         <View style={styles.bottomInfoBar}>
           <MaterialCommunityIcons name="radar" size={24} color="#D32F2F" />
           <Text style={styles.bottomInfoText}>
-            <Text style={{ fontWeight: "bold" }}>{emergencyAlerts.length} permintaan darah</Text> di sekitar Anda
+            <Text style={{ fontWeight: "bold" }}>{emergencyAlerts.length.toString()} permintaan darah</Text> di sekitar Anda
           </Text>
         </View>
-      )}
+      ) : null}
 
-      {/* MODAL BOTTOM SHEET (Form List & Notes) */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -259,21 +251,20 @@ const getUrgencyText = (level?: string) => {
           setSelectedAlert(null);
         }}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => {
-            setSelectedHospitalName(null);
-            setSelectedAlert(null);
-          }}
-        >
-          {/* Prevent touches inside the sheet from closing the modal */}
-          <TouchableOpacity activeOpacity={1} style={styles.bottomSheetContainer}>
-            
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={StyleSheet.absoluteFill} 
+            activeOpacity={1} 
+            onPress={() => {
+              setSelectedHospitalName(null);
+              setSelectedAlert(null);
+            }}
+          />
+
+          <View style={styles.bottomSheetContainer}>
             <View style={styles.dragHandle} />
 
             {selectedAlert ? (
-              // FORM KONFIRMASI (NOTES)
               <View style={styles.sheetContent}>
                 <Text style={styles.sheetTitle}>Konfirmasi Kehadiran</Text>
                 <Text style={styles.sheetSubtitle}>
@@ -299,21 +290,20 @@ const getUrgencyText = (level?: string) => {
                 </View>
               </View>
             ) : (
-              // LIST REQUEST DARURAT
-              <View style={[styles.sheetContent, { paddingBottom: 0 }]}>
-                <Text style={styles.sheetTitle}>{selectedHospitalName}</Text>
-                <Text style={styles.sheetSubtitle}>{filteredAlerts.length} permintaan aktif di lokasi ini</Text>
+              <View style={[styles.sheetContent, { paddingBottom: 0, flexShrink: 1 }]}>
+                <Text style={styles.sheetTitle}>{selectedHospitalName || ""}</Text>
+                <Text style={styles.sheetSubtitle}>{filteredAlerts.length.toString()} permintaan aktif di lokasi ini</Text>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30, paddingTop: 10 }}>
                   {filteredAlerts.map((alert, index) => (
-                    <View key={alert.requestId || index} style={styles.alertCard}>
+                    <View key={alert.requestId || index.toString()} style={styles.alertCard}>
                       
                       <View style={styles.alertHeaderCard}>
                         <MaterialCommunityIcons name="alert-decagram" size={24} color={getUrgencyColor(alert.urgencyLevel)} />
                         <View style={styles.headerTextContainer}>
-                        <Text style={[styles.urgentTag, { color: getUrgencyColor(alert.urgencyLevel) }]}>
-    {getUrgencyText(alert.urgencyLevel)}
-  </Text>
+                          <Text style={[styles.urgentTag, { color: getUrgencyColor(alert.urgencyLevel) }]}>
+                            {getUrgencyText(alert.urgencyLevel)}
+                          </Text>
                           <Text style={styles.requestId}>Req ID: {alert.requestId.slice(-8).toUpperCase()}</Text>
                         </View>
                         <View style={styles.distanceBadge}>
@@ -324,13 +314,23 @@ const getUrgencyText = (level?: string) => {
                       <View style={styles.mainInfo}>
                         <View style={styles.infoBlock}>
                           <Text style={styles.infoLabel}>Dibutuhkan</Text>
-                          <Text style={styles.infoValue}>{alert.bagsNeeded} <Text style={styles.infoUnit}>Kantong</Text></Text>
+                          <Text style={styles.infoValue}>{alert.bagsNeeded.toString()} <Text style={styles.infoUnit}>Kantong</Text></Text>
                         </View>
                         <View style={styles.divider} />
                         <View style={styles.infoBlock}>
                           <Text style={styles.infoLabel}>Gol. Darah</Text>
                           <Text style={[styles.infoValue, { color: "#D32F2F" }]}>{alert.bloodType}</Text>
                         </View>
+                      </View>
+
+                      <View style={styles.patientInfoContainer}>
+                        <Text style={styles.patientName}>
+                          {alert.patientName || "Pasien Hamba Allah"} {alert.patientAge ? `(${alert.patientAge.toString()} thn)` : null}
+                        </Text>
+                        
+                        {alert.reason ? (
+                          <Text style={styles.patientReason}>Diagnosa: {alert.reason}</Text>
+                        ) : null}
                       </View>
                       
                       <View style={styles.actionButtons}>
@@ -348,10 +348,9 @@ const getUrgencyText = (level?: string) => {
                 </ScrollView>
               </View>
             )}
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
-
     </View>
   );
 }
@@ -359,8 +358,6 @@ const getUrgencyText = (level?: string) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8F9FA" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  
-  // --- PETA STYLES ---
   map: { ...StyleSheet.absoluteFillObject },
   loadingMap: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' },
   loadingText: { marginTop: 12, color: '#666', fontWeight: "500" },
@@ -373,13 +370,8 @@ const styles = StyleSheet.create({
   },
   markerBadgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
 
-  // --- FLOATING UI (ATAS) ---
   floatingUIContainer: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    zIndex: 10,
+    position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 10, zIndex: 10,
   },
   headerCard: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
@@ -405,10 +397,7 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
   statusText: { fontSize: 13, fontWeight: "bold", color: "#444" },
 
-  // --- FLOATING CONTROLS (BAWAH) ---
-  floatingControls: {
-    position: 'absolute', bottom: 90, right: 20, zIndex: 10,
-  },
+  floatingControls: { position: 'absolute', bottom: 90, right: 20, zIndex: 10 },
   recenterButton: {
     backgroundColor: "#FFF", width: 50, height: 50, borderRadius: 25,
     justifyContent: "center", alignItems: "center",
@@ -419,28 +408,21 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 30, alignSelf: "center",
     flexDirection: "row", alignItems: "center",
     backgroundColor: "#FFF", paddingHorizontal: 20, paddingVertical: 12, borderRadius: 30,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 5,
-    gap: 8,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 5, gap: 8,
   },
   bottomInfoText: { fontSize: 14, color: "#333" },
 
-  // --- BOTTOM SHEET MODAL ---
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
   bottomSheetContainer: {
-    backgroundColor: "#F8F9FA",
-    borderTopLeftRadius: 30, borderTopRightRadius: 30,
+    backgroundColor: "#F8F9FA", borderTopLeftRadius: 30, borderTopRightRadius: 30,
     width: "100%", maxHeight: SCREEN_HEIGHT * 0.85,
     shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 20,
   },
-  dragHandle: {
-    width: 40, height: 5, borderRadius: 3, backgroundColor: "#DDD",
-    alignSelf: "center", marginTop: 12, marginBottom: 8,
-  },
+  dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: "#DDD", alignSelf: "center", marginTop: 12, marginBottom: 8 },
   sheetContent: { paddingHorizontal: 24, paddingBottom: 30 },
   sheetTitle: { fontSize: 22, fontWeight: "bold", color: "#1A1A1A", marginBottom: 4 },
   sheetSubtitle: { fontSize: 14, color: "#666", marginBottom: 16 },
 
-  // --- KARTU REQUEST ---
   alertCard: { 
     backgroundColor: "#FFF", borderRadius: 20, padding: 18, marginBottom: 16, 
     borderWidth: 1, borderColor: "#F0F0F0",
@@ -453,12 +435,16 @@ const styles = StyleSheet.create({
   distanceBadge: { backgroundColor: "#F5F5F5", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
   distanceText: { fontSize: 12, fontWeight: 'bold', color: '#444' },
   
-  mainInfo: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#Fcfcfc", borderRadius: 16, padding: 16, marginBottom: 20 },
+  mainInfo: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#Fcfcfc", borderRadius: 16, padding: 16, marginBottom: 12 },
   infoBlock: { flex: 1, alignItems: "center" },
   divider: { width: 1, height: 40, backgroundColor: "#EAEAEA" },
   infoLabel: { fontSize: 12, color: "#888", marginBottom: 4 },
   infoValue: { fontSize: 24, fontWeight: "900", color: "#1A1A1A" },
   infoUnit: { fontSize: 12, fontWeight: "600", color: "#888" },
+
+  patientInfoContainer: { backgroundColor: "#FFF8F0", padding: 14, borderRadius: 14, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: "#FF9800" },
+  patientName: { fontSize: 14, fontWeight: "bold", color: "#333" },
+  patientReason: { fontSize: 13, color: "#666", marginTop: 4, lineHeight: 18, fontStyle: "italic" },
   
   actionButtons: { flexDirection: "row", gap: 12 },
   declineButton: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: "#F5F5F5", alignItems: "center" },
@@ -466,11 +452,7 @@ const styles = StyleSheet.create({
   acceptButton: { flex: 2, flexDirection: "row", justifyContent: "center", paddingVertical: 14, borderRadius: 14, backgroundColor: "#D32F2F", alignItems: "center", gap: 8 },
   acceptText: { color: "#FFF", fontWeight: "bold", fontSize: 14, letterSpacing: 0.5 },
 
-  // --- FORM CATATAN ---
-  notesInput: { 
-    backgroundColor: "#FFF", borderWidth: 1, borderColor: "#EAEAEA", borderRadius: 16, 
-    padding: 16, minHeight: 100, textAlignVertical: "top", fontSize: 15, color: "#333", marginBottom: 24 
-  },
+  notesInput: { backgroundColor: "#FFF", borderWidth: 1, borderColor: "#EAEAEA", borderRadius: 16, padding: 16, minHeight: 100, textAlignVertical: "top", fontSize: 15, color: "#333", marginBottom: 24 },
   modalButtons: { flexDirection: "row", gap: 12 },
   modalCancelButton: { flex: 1, paddingVertical: 16, borderRadius: 16, backgroundColor: "#F5F5F5", alignItems: "center" },
   modalCancelText: { color: "#444", fontWeight: "bold", fontSize: 14 },

@@ -19,8 +19,13 @@ import { supabase } from "../../supabase";
 
 export default function EditProfileScreen() {
   const { profile, user, refreshProfile } = useAuth();
+  
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  
+  // STATE BARU: Untuk menyimpan status apakah user sudah pernah donor
+  const [hasDonated, setHasDonated] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -29,6 +34,8 @@ export default function EditProfileScreen() {
     blood_type: "",
     is_available: true,
   });
+
+  const isHospital = !!profile?.hospital_id;
 
   useEffect(() => {
     if (profile) {
@@ -42,6 +49,33 @@ export default function EditProfileScreen() {
       });
     }
   }, [profile]);
+
+  // LOGIC BARU: Cek riwayat donor langsung di komponen ini
+  useEffect(() => {
+    const checkDonationHistory = async () => {
+      if (!user?.id || isHospital) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("donor_responses")
+          .select("id")
+          .eq("donor_id", user.id)
+          .in("response_status", ["accepted", "completed"]) // Syarat donor sah
+          .limit(1);
+
+        if (error) throw error;
+
+        // Jika ada data, berarti sudah pernah donor
+        if (data && data.length > 0) {
+          setHasDonated(true);
+        }
+      } catch (error) {
+        console.error("Gagal mengecek riwayat donor:", error);
+      }
+    };
+
+    checkDonationHistory();
+  }, [user?.id, isHospital]);
 
   const updateLocation = async () => {
     setLocationLoading(true);
@@ -75,10 +109,9 @@ export default function EditProfileScreen() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const isHospital = !!profile?.hospital_id;
       const tableName = isHospital ? "hospital_staff" : "user_profiles";
 
-      const updateData = isHospital
+      const updateData: any = isHospital
         ? { name: form.name, phone: form.phone }
         : {
             name: form.name,
@@ -86,8 +119,12 @@ export default function EditProfileScreen() {
             address: form.address,
             birth_date: form.birth_date || null,
             is_available: form.is_available,
-            blood_type: form.blood_type,
           };
+
+      // KEAMANAN DATA: Hanya masukkan data golongan darah JIKA user BELUM pernah donor
+      if (!isHospital && !hasDonated) {
+        updateData.blood_type = form.blood_type;
+      }
 
       const { error } = await supabase
         .from(tableName)
@@ -105,7 +142,6 @@ export default function EditProfileScreen() {
   };
 
   const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-  const isHospital = !!profile?.hospital_id;
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
@@ -178,26 +214,40 @@ export default function EditProfileScreen() {
 
               <Text style={styles.label}>Golongan Darah</Text>
               <View style={styles.bloodTypeGrid}>
-                {bloodTypes.map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.bloodTypeButton,
-                      form.blood_type === type && styles.bloodTypeButtonActive,
-                    ]}
-                    onPress={() => setForm({ ...form, blood_type: type })}
-                  >
-                    <Text
+                {bloodTypes.map((type) => {
+                  const isActive = form.blood_type === type;
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      disabled={hasDonated} // Gunakan state hasDonated di sini
                       style={[
-                        styles.bloodTypeText,
-                        form.blood_type === type && styles.bloodTypeTextActive,
+                        styles.bloodTypeButton,
+                        isActive && styles.bloodTypeButtonActive,
+                        hasDonated && !isActive && styles.bloodTypeButtonDisabled, 
+                        hasDonated && isActive && styles.bloodTypeButtonDisabledActive 
                       ]}
+                      onPress={() => setForm({ ...form, blood_type: type })}
                     >
-                      {type}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={[
+                          styles.bloodTypeText,
+                          isActive && styles.bloodTypeTextActive,
+                          hasDonated && !isActive && styles.bloodTypeTextDisabled 
+                        ]}
+                      >
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
+
+              {/* Tampilkan Peringatan Jika Terkunci */}
+              {hasDonated && (
+                <Text style={styles.warningText}>
+                  * Golongan darah tidak dapat diubah karena Anda sudah memiliki riwayat donor (Diterima / Selesai).
+                </Text>
+              )}
 
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>Siap Donor</Text>
@@ -296,11 +346,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   label: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 8 },
+  
   bloodTypeGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 6,
   },
   bloodTypeButton: {
     paddingHorizontal: 16,
@@ -313,6 +364,27 @@ const styles = StyleSheet.create({
   bloodTypeButtonActive: { backgroundColor: "#D32F2F", borderColor: "#D32F2F" },
   bloodTypeText: { fontSize: 14, color: "#666" },
   bloodTypeTextActive: { color: "#FFF" },
+  
+  // STYLE KHUSUS SAAT DISABLE
+  bloodTypeButtonDisabled: {
+    backgroundColor: "#EEEEEE",
+    borderColor: "#E0E0E0",
+  },
+  bloodTypeButtonDisabledActive: {
+    backgroundColor: "#E57373", // Warna merah pucat untuk pilihan yg terkunci
+    borderColor: "#E57373",
+  },
+  bloodTypeTextDisabled: {
+    color: "#BBB",
+  },
+  warningText: {
+    color: "#D32F2F",
+    fontSize: 12,
+    marginBottom: 16,
+    fontStyle: "italic",
+    lineHeight: 16,
+  },
+
   switchRow: {
     flexDirection: "row",
     justifyContent: "space-between",

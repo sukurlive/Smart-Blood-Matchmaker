@@ -25,6 +25,9 @@ export interface EmergencyAlert {
   urgencyLevel?: string;
   latitude?: number;
   longitude?: number;
+  patientName?: string; // <-- TAMBAH INI
+  patientAge?: number;  // <-- TAMBAH INI
+  reason?: string;      // <-- TAMBAH INI
 }
 
 interface BloodAgentResult {
@@ -169,6 +172,9 @@ export const useBloodAgent = (userProfile: UserProfile): BloodAgentResult => {
             urgencyLevel: req.urgency_level,
             latitude: req.lat,
             longitude: req.lng,
+            patientName: req.patient_name, // <-- TAMBAH INI
+  patientAge: req.patient_age,   // <-- TAMBAH INI
+  reason: req.reason             // <-- TAMBAH INI
           });
       }
       setEmergencyAlerts(alerts);

@@ -113,26 +113,36 @@ export default function AdminRequestsScreen() {
     }
   };
 
-  const updateStatus = async (id: string, newStatus: string) => {
-    Alert.alert("Konfirmasi", "Apakah Anda yakin ingin menonaktifkan request ini?", [
+const updateStatus = async (id: string, newStatus: string) => {
+  const isActivating = newStatus === "Active";
+  
+  Alert.alert(
+    "Konfirmasi", 
+    `Apakah Anda yakin ingin ${isActivating ? 'mengaktifkan' : 'menonaktifkan'} request ini?`, 
+    [
       { text: "Batal", style: "cancel" },
       {
-        text: "Non-aktifkan",
-        style: "destructive",
+        text: isActivating ? "Aktifkan" : "Non-aktifkan",
+        style: isActivating ? "default" : "destructive",
         onPress: async () => {
           const { error } = await supabase
             .from("blood_requests")
             .update({ status: newStatus })
             .eq("id", id);
-          if (error) Alert.alert("Error", error.message);
-          else {
+            
+          if (error) {
+            Alert.alert("Error", error.message);
+          } else {
             await fetchRequests();
-            setFilteredRequests(prev => prev.map(req => req.id === id ? { ...req, status: newStatus } : req));
+            setFilteredRequests(prev => 
+              prev.map(req => req.id === id ? { ...req, status: newStatus } : req)
+            );
           }
         },
       },
-    ]);
-  };
+    ]
+  );
+};
 
   const handleAddRequest = async () => {
     if (!form.hospital_id) {
@@ -215,14 +225,15 @@ export default function AdminRequestsScreen() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active": return "#4CAF50";
-      case "Completed": return "#2196F3";
-      case "InActive": return "#999"; 
-      case "Cancelled": return "#999"; 
-      default: return "#666";
-    }
-  };
+  switch (status) {
+    case "Active": return "#4CAF50";
+    case "pending": return "#FF9800"; // Warna oranye untuk pending
+    case "Completed": return "#2196F3";
+    case "InActive": return "#999"; 
+    case "Cancelled": return "#999"; 
+    default: return "#666";
+  }
+};
 
   if (loading) {
     return (
@@ -377,17 +388,31 @@ export default function AdminRequestsScreen() {
                       </View>
                     </View>
                     
-                    {req.status === "Active" && (
-                      <View style={styles.actionButtons}>
-                        <TouchableOpacity
-                          style={styles.declineButton}
-                          onPress={() => updateStatus(req.id, "InActive")}
-                        >
-                          <Ionicons name="power" size={16} color="#666" />
-                          <Text style={styles.declineText}>Non-aktifkan Request</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
+                {/* Tombol untuk Request yang masih Pending */}
+{req.status === "pending" && (
+  <View style={styles.actionButtons}>
+    <TouchableOpacity
+      style={[styles.declineButton, { backgroundColor: "#E8F5E9" }]}
+      onPress={() => updateStatus(req.id, "Active")}
+    >
+      <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+      <Text style={[styles.declineText, { color: "#4CAF50" }]}>Aktifkan Request</Text>
+    </TouchableOpacity>
+  </View>
+)}
+
+{/* Tombol untuk Request yang sedang Active */}
+{req.status === "Active" && (
+  <View style={styles.actionButtons}>
+    <TouchableOpacity
+      style={styles.declineButton}
+      onPress={() => updateStatus(req.id, "InActive")}
+    >
+      <Ionicons name="power" size={16} color="#666" />
+      <Text style={styles.declineText}>Non-aktifkan Request</Text>
+    </TouchableOpacity>
+  </View>
+)}
                   </View>
                 ))
               ) : (
